@@ -89,5 +89,3 @@ Invoked as `researcher_agent` from the supervisor’s tool node. `StateGraph(Res
 | `assets/` | README figures |
 
 ## License
-
-Add your license here if applicable.
