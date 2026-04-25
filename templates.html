@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deep Research Workspace</title>
+    <style>
+      .page-shell {
+        max-width: 1200px;
+        margin: 40px auto;
+        padding: 0 16px;
+      }
+      .main-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+        gap: 24px;
+        align-items: start;
+      }
+      @media (max-width: 768px) {
+        .main-grid {
+          grid-template-columns: 1fr;
+        }
+        .review-sidebar {
+          order: -1;
+        }
+      }
+      .review-sidebar {
+        position: sticky;
+        top: 16px;
+      }
+      .review-sidebar-inner {
+        background: #ffffff;
+        border: 1px solid #dbe3f0;
+        border-radius: 12px;
+        padding: 16px;
+      }
+      .interrupt-banner {
+        background: #fffbeb;
+        border: 1px solid #fcd34d;
+        color: #92400e;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+      }
+      .interrupt-banner .hint {
+        margin-top: 10px;
+        font-size: 13px;
+        color: #b45309;
+      }
+      .interrupt-msg {
+        margin-top: 8px;
+        white-space: pre-wrap;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body style="font-family: Arial, sans-serif; background: #f8fafc; color: #1f2937;">
+    <div class="page-shell">
+    <h1 style="margin-bottom: 8px;">Deep Research Workspace</h1>
+    <p style="margin-top: 0; color: #4b5563;">输入你的研究问题，系统会在当前会话中运行，并在下方展示最新输出。</p>
+
+    {% if error_message %}
+    <div style="background: #fff1f2; border: 1px solid #f3c7cf; color: #8a1028; border-radius: 10px; padding: 12px 14px; margin-bottom: 20px;">
+      <strong>Request Failed</strong>
+      <div style="margin-top: 8px; white-space: pre-wrap;">{{ error_message }}</div>
+    </div>
+    {% endif %}
+
+    <div class="main-grid">
+      <aside class="review-sidebar">
+        <div class="review-sidebar-inner">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #475569; margin-bottom: 12px;">
+            Human review
+          </div>
+
+          {% if interrupt_messages %}
+          <div class="interrupt-banner">
+            <strong>Paused — waiting for your review</strong>
+            {% for msg in interrupt_messages %}
+            <div class="interrupt-msg">{{ msg }}</div>
+            {% endfor %}
+            <div class="hint">Use Approve or Revise.</div>
+          </div>
+          {% else %}
+          <p style="margin: 0 0 16px; font-size: 13px; color: #64748b; line-height: 1.5;">
+            When the run pauses for scope approval, the notice appears here.
+          </p>
+          {% endif %}
+
+          <form method="post" action="/research-form-resume" onsubmit="showResumeLoadingState()">
+            <input id="review-action-input" type="hidden" name="action" value="" />
+            <input type="hidden" name="thread_id" value="{{ thread_id }}" />
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <button id="approve-button" type="button" onclick="submitReviewAction('approve')" style="padding: 10px 16px; background: #0f766e; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%;">Approve</button>
+              <button id="revise-button" type="button" onclick="submitReviewAction('revise')" style="padding: 10px 16px; background: #b45309; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%;">Revise</button>
+            </div>
+            <div id="resume-loading-indicator" style="display: none; margin-top: 12px; color: #0f766e; font-weight: 600; font-size: 13px;">
+              Sending review action...
+            </div>
+          </form>
+        </div>
+      </aside>
+
+      <div class="main-column">
+    <form method="post" action="/research-form" onsubmit="showLoadingState()" style="background: #ffffff; border: 1px solid #dbe3f0; border-radius: 12px; padding: 20px;">
+      <div style="display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 16px; align-items: start;">
+        <div>
+          <label for="query"><strong>Query</strong></label><br />
+          <textarea id="query" name="query" rows="8" placeholder="Ask a deep research question..." style="width: 100%; margin-top: 8px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; box-sizing: border-box;">{{ query }}</textarea>
+        </div>
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 14px 16px;">
+          <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #475569; margin-bottom: 8px;">
+            Thread ID
+          </div>
+          <div style="color: #334155; font-family: monospace; word-break: break-all; line-height: 1.5; font-size: 13px;">
+            {{ thread_id }}
+          </div>
+        </div>
+      </div>
+      <input type="hidden" name="thread_id" value="{{ thread_id }}" />
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px;">
+        <button id="submit-button" type="submit" style="padding: 10px 16px; background: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer;">Run Research</button>
+        <button type="button" onclick="startNewSession()" style="padding: 10px 16px; background: #ffffff; color: #1f2937; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">New Session</button>
+      </div>
+      <div id="loading-indicator" style="display: none; margin-top: 14px; color: #1d4ed8; font-weight: 600;">
+        Research is running, please wait...
+      </div>
+    </form>
+
+    {% if output_text %}
+    <section style="margin-top: 24px;">
+      <h2 style="margin-bottom: 12px;">输出</h2>
+      <pre style="white-space: pre-wrap; background: #ffffff; border: 1px solid #dbe3f0; border-radius: 10px; padding: 16px; line-height: 1.5;">{{ output_text }}</pre>
+    </section>
+    {% endif %}
+
+    {% if message_entries %}
+    <section style="margin-top: 24px;">
+      <h2 style="margin-bottom: 12px;">历史记录</h2>
+      {% for entry in message_entries %}
+      <div style="background: #ffffff; border: 1px solid #dbe3f0; border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;">
+        <div style="font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: #475569; margin-bottom: 8px;">
+          {{ entry.role }}
+        </div>
+        <div style="white-space: pre-wrap; line-height: 1.5;">{{ entry.content }}</div>
+      </div>
+      {% endfor %}
+    </section>
+    {% endif %}
+      </div>
+    </div>
+
+    <script>
+      function showLoadingState() {
+        const button = document.getElementById("submit-button");
+        const loadingIndicator = document.getElementById("loading-indicator");
+        if (button) {
+          button.disabled = true;
+          button.textContent = "Running...";
+          button.style.opacity = "0.7";
+          button.style.cursor = "not-allowed";
+        }
+        if (loadingIndicator) {
+          loadingIndicator.style.display = "block";
+        }
+      }
+
+      function startNewSession() {
+        const queryInput = document.getElementById("query");
+
+        if (queryInput) {
+          queryInput.value = "";
+        }
+        window.location.href = "/";
+      }
+
+      function showResumeLoadingState() {
+        const approveButton = document.getElementById("approve-button");
+        const reviseButton = document.getElementById("revise-button");
+        const loadingIndicator = document.getElementById("resume-loading-indicator");
+        if (approveButton) {
+          approveButton.disabled = true;
+          approveButton.style.opacity = "0.7";
+          approveButton.style.cursor = "not-allowed";
+        }
+        if (reviseButton) {
+          reviseButton.disabled = true;
+          reviseButton.style.opacity = "0.7";
+          reviseButton.style.cursor = "not-allowed";
+        }
+        if (loadingIndicator) {
+          loadingIndicator.style.display = "block";
+        }
+      }
+
+      function submitReviewAction(action) {
+        const form = document.querySelector('form[action="/research-form-resume"]');
+        const actionInput = document.getElementById("review-action-input");
+        if (!form || !actionInput) return;
+        actionInput.value = action;
+        showResumeLoadingState();
+        form.submit();
+      }
+    </script>
+    </div>
+  </body>
+</html>

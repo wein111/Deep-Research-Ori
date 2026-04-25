@@ -1,0 +1,15 @@
+fastapi==0.135.1
+uvicorn[standard]==0.41.0
+pydantic==2.12.5
+python-multipart==0.0.22
+jinja2==3.1.6
+python-dotenv==1.2.2
+langchain==1.2.11
+langchain-core==1.2.26
+langchain-openai==1.1.11
+langgraph==1.1.0
+langgraph-checkpoint-redis==0.4.1
+langsmith==0.7.16
+tavily-python==0.7.23
+redis==7.1.1
+rich==14.3.3
